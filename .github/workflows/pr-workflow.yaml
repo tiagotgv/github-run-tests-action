@@ -1,5 +1,4 @@
-on: [push]
-
+on: [pull_request]
 name: mabl
 
 jobs:
@@ -38,4 +37,3 @@ jobs:
           http-headers: |
             X-Test-Header-1: 1234
             X-Test-Header-2: 5678
-

@@ -1,11 +1,12 @@
 import {Execution, JourneyInfo} from './entities/ExecutionResult';
 import Table from 'cli-table3';
-import {HorizontalTable} from 'cli-table3';
 import * as moment from 'moment';
-import * as core from '@actions/core/lib/core';
+import {Option} from './interfaces';
 
-export function prettyPrintExecution(execution: Execution) {
-  let planTable = new Table({
+export function prettyFormatExecution(execution: Execution): string {
+  let outputString = '';
+
+  const planTable = new Table({
     head: [],
     style: {
       head: [],
@@ -13,7 +14,8 @@ export function prettyPrintExecution(execution: Execution) {
     },
     colWidths: [15, 30, 15, 13, 15, 20, 17, 130],
     wordWrap: true,
-  }) as HorizontalTable;
+  });
+
   planTable.push([
     'Plan Name:',
     execution.plan.name,
@@ -25,33 +27,39 @@ export function prettyPrintExecution(execution: Execution) {
     execution.plan.app_href,
   ]);
 
-  let journeyTable = new Table({
-    head: ['Browser', 'Status', 'Journey Name', 'Duration', 'mabl App Link'],
+  const testTable = new Table({
+    head: ['Browser', 'Status', 'Test Name', 'Duration', 'mabl App Link'],
     style: {
       head: [],
       border: [],
     },
     colWidths: [10, 15, 27, 15, 160],
     wordWrap: true,
-  }) as HorizontalTable;
-  execution.journey_executions.forEach(jE => {
-    let journey: JourneyInfo | undefined = execution.journeys.find(
-      journey => journey.id === jE.journey_id,
+  });
+
+  execution.journey_executions.forEach((journeyExecution) => {
+    const test: Option<JourneyInfo> = execution.journeys.find(
+      (test) => test.id === journeyExecution.journey_id,
     );
-    journeyTable.push([
-      jE.browser_type,
-      jE.success ? 'Passed' : 'Failed',
-      journey ? journey.name : jE.journey_id,
-      moment.utc(jE.stop_time - jE.start_time).format('HH:mm:ss'),
-      jE.app_href,
+
+    testTable.push([
+      journeyExecution.browser_type,
+      journeyExecution.success ? 'Passed' : 'Failed',
+      test ? test.name : journeyExecution.journey_id,
+      moment
+        .utc(journeyExecution.stop_time - journeyExecution.start_time)
+        .format('HH:mm:ss'),
+      journeyExecution.app_href,
     ]);
   });
 
-  outputTable(planTable);
-  outputTable(journeyTable);
+  outputString += outputTable(planTable);
+  outputString += '\n'; // prevent offset table row in output
+  outputString += outputTable(testTable);
+
+  return outputString;
 }
 
-function outputTable(table: HorizontalTable) {
-  let tableAsString = table.toString().replace(/[\r\n]+/, '\n    ');
-  console.log(tableAsString);
+function outputTable(table: Table.Table): string {
+  return table.toString().replace(/[\r\n]+/, '\n    ');
 }
